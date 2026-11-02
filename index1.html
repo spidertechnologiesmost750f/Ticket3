@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticketmaster Mobile App Clone - Full Edition</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        .tm-barcode { display:flex; align-items:stretch; justify-content:center; height:56px; gap:1px; overflow:hidden; }
+        .tm-barcode span { display:block; background:#111; }
+        .tm-barcode span.blue { background:#2563eb; }
+        @keyframes barcode-shift { 0% { transform: translateX(0); } 100% { transform: translateX(-6px); } }
+        .tm-barcode { animation: barcode-shift 0.7s steps(3) infinite; }
+        @media print {
+            body { background: white !important; color: black !important; }
+            #phone-frame { max-width: 100% !important; border: none !important; box-shadow: none !important; height: auto !important; max-height: none !important; }
+            #bottom-nav, #safari-footer, button { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-neutral-950 text-neutral-900 flex justify-center items-center min-h-screen font-sans antialiased select-none">
+    <!-- Mobile Phone Frame Container -->
+    <div id="phone-frame" class="w-full max-w-[410px] bg-black h-[100dvh] max-h-[100dvh] md:h-[min(820px,100dvh)] md:max-h-[820px] flex flex-col shadow-2xl relative overflow-hidden rounded-none border-0 pt-0 pb-0 md:rounded-[36px] md:border-[8px] md:border-neutral-900 md:pt-2 md:pb-1">
+        <!-- App Dynamic Content Area -->
+        <div id="app-view" class="flex-1 overflow-y-auto relative bg-white pb-28 min-h-0">
+            <!-- Dynamic Views Injected Here -->
+        </div>
+        <div id="app-modal" class="hidden absolute inset-0 z-[90] bg-black/50 flex items-center justify-center px-5"></div>
+        <!-- Global Bottom Navigation Bar (Shown ONLY in Look 1) -->
+        <div id="bottom-nav" class="bg-white border-t border-gray-200 py-2 px-6 flex justify-between items-center text-[10px] text-gray-500 z-50 absolute bottom-0 left-0 right-0">
+            <button onclick="switchView('discover')" class="flex flex-col items-center focus:outline-none transition text-gray-500 hover:text-black" id="nav-discover">
+                <i class="fa-solid fa-magnifying-glass text-sm mb-0.5"></i>
+                <span>Discover</span>
+            </button>
+            <button onclick="switchView('events')" class="flex flex-col items-center focus:outline-none transition hover:text-black">
+                <i class="fa-regular fa-heart text-sm mb-0.5"></i>
+                <span class="font-medium">Favorites</span>
+            </button>
+            <button onclick="switchView('events')" class="flex flex-col items-center focus:outline-none text-gray-500" id="nav-tickets">
+                <i class="fa-solid fa-ticket text-sm mb-0.5"></i>
+                <span>My Tickets</span>
+            </button>
+            <button onclick="switchView('events')" class="flex flex-col items-center focus:outline-none transition hover:text-black">
+                <i class="fa-solid fa-tag text-sm mb-0.5"></i>
+                <span class="font-medium">Sell</span>
+            </button>
+            <button onclick="switchView('account')" class="flex flex-col items-center focus:outline-none relative transition text-gray-500 hover:text-black cursor-pointer" id="nav-account">
+                <i class="fa-regular fa-user text-sm mb-0.5"></i>
+                <span>My Account</span>
+                <span id="account-dot" class="absolute -top-0.5 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            </button>
+        </div>
+        <!-- Mobile Safari Browser Footer Bar (Shown ONLY in Look 2) -->
+        <div id="safari-footer" class="hidden bg-neutral-900 border-t border-neutral-800 py-2 px-4 flex justify-between items-center text-white z-50 absolute bottom-0 left-0 right-0 text-xs">
+            <div class="flex space-x-4 text-neutral-400">
+                <i class="fa-solid fa-arrow-left"></i>
+                <i class="fa-solid fa-arrow-right opacity-40"></i>
+            </div>
+            <div class="bg-neutral-800 px-4 py-1 rounded-full text-[11px] text-neutral-200 font-mono tracking-tight flex items-center space-x-2">
+                <span>aa</span>
+                <span id="safari-domain-text" class="text-white font-sans font-medium">ticketmaster.com</span>
+            </div>
+            <div class="flex space-x-4 text-neutral-400">
+                <i class="fa-solid fa-arrow-up-from-bracket"></i>
+                <i class="fa-solid fa-clone text-[10px]"></i>
+            </div>
+        </div>
+        <!-- OTP Toast Notification Bar -->
+        <div id="otp-toast" class="hidden absolute inset-x-4 top-14 z-[60] flex justify-center pointer-events-none">
+            <div class="bg-neutral-900 text-white text-[11px] font-medium rounded-xl px-4 py-2.5 shadow-2xl text-center max-w-[320px] leading-snug">
+                OTP to receive tickets has been sent to your email
+            </div>
+        </div>
+    </div>
+    <!-- JavaScript Application Logic & Persistent Storage -->
+    <script>
+        let defaultEvents = [
+            {
+                id: 1,
+                showTitle: "The Weeknd: After Hours Til Dawn Tour",
+                ticketType: "CAT 2 Standard",
+                look2Badge: "Restricted View",
+                imageLink: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80",
+                date: "03 Oct 2026 (Sat.) 08:00 pm",
+                purchaseDate: "15 Sep 2026",
+                time: "08:00 PM",
+                dayOfWeek: "Saturday",
+                country: "United States",
+                domain: "ticketmaster.com",
+                flagLink: "🇺🇸",
+                location: "Los Angeles, CA",
+                venue: "National Stadium",
+                sec: "434",
+                row: "Row A",
+                startSeat: 36,
+                numTickets: 1,
+                minTransferLimit: 1,
+                username: "Chester leong",
+                orderNumber: "TR-18492255",
+                email: "chesterleong875@gmail.com",
+                phoneLast4: "3321",
+                mapQuery: "National+Stadium",
+                ticketPrice: 246.00,
+                bookingFee: 10.00,
+                gate: "Gate 3 / Door A",
+                attendee: "Chester leong",
+                importantInfo: "Each Mobile Ticket can only be used once. Please keep your tickets safe. Doors open 90 minutes before showtime.",
+                isTrending: true
+            }
+        ];
+        let events = JSON.parse(localStorage.getItem('tm_clone_events')) || defaultEvents;
+        function saveEventsToStorage() {
+            localStorage.setItem('tm_clone_events', JSON.stringify(events));
+        }
+        let appSettings = JSON.parse(localStorage.getItem('tm_clone_settings')) || {
+            allowScreenshots: true,
+            blurReference: false,
+            useLookTwo: false,
+            allowTransfer: true,
+            hiddenEvents: {}
+        };
+        function saveSettingsToStorage() {
+            localStorage.setItem('tm_clone_settings', JSON.stringify(appSettings));
+        }
+        let userNotifications = JSON.parse(localStorage.getItem('tm_clone_notifs')) || [
+            {
+                id: 1,
+                title: "Welcome to Ticketmaster",
+                message: "Your account is active and verified for secure mobile ticket management.",
+                time: "2h ago",
+                unread: true
+            }
+        ];
+        function saveNotifsToStorage() {
+            localStorage.setItem('tm_clone_notifs', JSON.stringify(userNotifications));
+        }
+        let currentView = 'discover'; 
+        let activeEventId = events[0]?.id || 1;
+        let editingEventId = null;
+        let selectedSeatsState = {};
+        let recipientDraft = { fname: '', lname: '', email: '', mobile: '', note: '' };
+        let activeTicketIndex = 0;
+        let otpToastTimer = null;
+        let lastFailedRecipient = { name: '', email: '', count: 0, minRequired: 1 };
+        let showLookTwoMenuDropdown = false;
+        function addNotification(title, message, timeText = "Just now") {
+            userNotifications.unshift({
+                id: Date.now(),
+                title: title,
+                message: message,
+                time: timeText,
+                unread: true
+            });
+            saveNotifsToStorage();
+            updateAccountDot();
+        }
+        function updateAccountDot() {
+            const dot = document.getElementById('account-dot');
+            if (!dot) return;
+            const hasUnread = userNotifications.some(n => n.unread);
+            if (hasUnread) dot.classList.remove('hidden');
+            else dot.classList.add('hidden');
+        }
+        function updateBottomNavActiveState(view) {
+            const navDiscover = document.getElementById('nav-discover');
+            const navAccount = document.getElementById('nav-account');
+            if (navDiscover && navAccount) {
+                if (view === 'discover') {
+                    navDiscover.className = "flex flex-col items-center focus:outline-none transition text-blue-600 font-bold";
+                    navAccount.className = "flex flex-col items-center focus:outline-none relative transition text-gray-500 hover:text-black cursor-pointer";
+                } else if (view === 'account') {
+                    navDiscover.className = "flex flex-col items-center focus:outline-none transition text-gray-500 hover:text-black";
+                    navAccount.className = "flex flex-col items-center focus:outline-none relative transition text-black font-bold cursor-pointer";
+                } else {
+                    navDiscover.className = "flex flex-col items-center focus:outline-none transition text-gray-500 hover:text-black";
+                    navAccount.className = "flex flex-col items-center focus:outline-none relative transition text-gray-500 hover:text-black cursor-pointer";
+                }
+            }
+        }
+        function switchView(view, eventId = null) {
+            const container = document.getElementById('app-view');
+            const bottomNav = document.getElementById('bottom-nav');
+            const safariFooter = document.getElementById('safari-footer');
+            
+            if (eventId !== null) activeEventId = eventId;
+            if (!container) return;
+            
+            updateBottomNavActiveState(view);
+            const isFullscreenSubView = ['auth', 'transfer-select', 'transfer-method', 'transfer-form', 'barcode', 'manager', 'help-modal', 'notifications-view', 'transfer-success', 'transfer-failed', 'receipt-preview', 'receipt-edit', 'country-modal'].includes(view);
+            if (isFullscreenSubView) {
+                bottomNav.classList.add('hidden');
+                safariFooter.classList.add('hidden');
+                container.classList.remove('pb-28');
+            } else {
+                if (appSettings.useLookTwo) {
+                    bottomNav.classList.add('hidden');
+                    safariFooter.classList.remove('hidden');
+                    container.classList.add('pb-28');
+                } else {
+                    bottomNav.classList.remove('hidden');
+                    safariFooter.classList.add('hidden');
+                    container.classList.add('pb-28');
+                }
+            }
+            currentView = view;
+            if (eventId !== null && view === 'transfer-select') initSeatStateEmpty();
+            render();
+            container.scrollTop = 0;
+            if (view === 'transfer-success') showOtpToast();
+            else hideOtpToast();
+        }
+        function formatGotTicketsDate(ev) {
+            const day = (ev.dayOfWeek || '').toUpperCase();
+            const dateStr = (ev.date || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+            if (day && dateStr.toUpperCase().indexOf(day) === -1) {
+                return `${day} • ${dateStr}`.toUpperCase();
+            }
+            return dateStr.toUpperCase();
+        }
+        function shareGotTickets() {
+            const ev = events.find(e => e.id === activeEventId) || events[0];
+            if (!ev) return;
+            const text = `YOU GOT TICKETS!\n${ev.showTitle}\n${ev.date}\n${ev.venue}`;
+            if (navigator.share) {
+                navigator.share({ title: ev.showTitle, text }).catch(() => {});
+            } else if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => alert('Share text copied. Paste it on social media!'));
+            } else {
+                alert(text);
+            }
+        }
+        function renderGotTicketsShare(ev) {
+            const dateLine = formatGotTicketsDate(ev);
+            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${ev.mapQuery || 'National+Stadium'}`;
+            return `
+                <a href="${mapsUrl}" target="_blank" class="flex items-center justify-center py-4 relative px-4 border-t border-gray-100 mt-2">
+                    <span class="text-[15px] font-bold text-neutral-900">Get Directions</span>
+                    <span class="absolute right-5 w-5 h-5 rounded-full border-[3px] border-gray-300 bg-white"></span>
+                </a>
+                <button type="button" onclick="shareGotTickets()" class="w-full px-1 text-left">
+                    <div class="overflow-hidden bg-black flex h-44 shadow-md rounded-xl">
+                        <div class="w-[52%] relative overflow-hidden">
+                            <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('${ev.imageLink}');"></div>
+                            <div class="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent"></div>
+                            <div class="absolute bottom-0 left-0 right-0 p-2.5 text-white">
+                                <div class="text-[8px] font-semibold tracking-wide mb-1.5 uppercase leading-tight">${dateLine}</div>
+                                <div class="text-[10px] font-black uppercase leading-tight">${ev.showTitle}</div>
+                                <div class="text-[8px] text-white/80 mt-1">${ev.venue}</div>
+                            </div>
+                        </div>
+                        <div class="w-[48%] relative overflow-hidden flex flex-col items-center justify-center">
+                            <div class="absolute inset-0 bg-cover bg-center scale-125 blur-md" style="background-image: url('${ev.imageLink}');"></div>
+                            <div class="absolute inset-0 bg-black/50"></div>
+                            <div class="relative z-10 text-center px-3">
+                                <div class="text-[14px] font-black italic tracking-wide text-white uppercase leading-tight">YOU GOT<br>TICKETS!</div>
+                                <div class="w-10 h-[2px] bg-white mx-auto mt-2.5"></div>
+                            </div>
+                        </div>
+                    </div>
+                </button>
+                <div class="px-2 pt-4 pb-2">
+                    <h3 class="text-[15px] font-bold text-neutral-900 mb-1">Post on Social Media</h3>
+                    <p class="text-[12px] text-gray-500 leading-relaxed">Build hype for the event, and share that you got tickets with your friends and family.</p>
+                </div>
+            `;
+        }
+        function renderTransferSellDock() {
+            return `
+                <div class="absolute bottom-12 left-0 right-0 bg-white border-t border-gray-200 flex items-stretch z-40">
+                    ${appSettings.allowTransfer ? `
+                        <button onclick="switchView('auth')" class="flex-1 flex flex-col items-center justify-center py-2.5 hover:bg-gray-50 transition focus:outline-none">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-blue-600 text-[16px]"></i>
+                            <span class="text-[11px] font-semibold text-neutral-900 mt-0.5">Transfer</span>
+                        </button>
+                    ` : `
+                        <div class="flex-1 flex flex-col items-center justify-center py-2.5 opacity-40 select-none">
+                            <i class="fa-solid fa-ban text-gray-400 text-[16px]"></i>
+                            <span class="text-[11px] font-semibold text-gray-400 mt-0.5">Transfer</span>
+                        </div>
+                    `}
+                    <div class="w-px bg-gray-200 my-2.5"></div>
+                    <button onclick="alert('Ticket listing enabled for selling.')" class="flex-1 flex flex-col items-center justify-center py-2.5 hover:bg-gray-50 transition focus:outline-none">
+                        <i class="fa-solid fa-tag text-neutral-800 text-[16px] -rotate-45"></i>
+                        <span class="text-[11px] font-semibold text-neutral-900 mt-0.5">Sell</span>
+                    </button>
+                </div>
+            `;
+        }
+        function showAppModal(html) {
+            const modal = document.getElementById('app-modal');
+            if (!modal) return;
+            modal.innerHTML = html;
+            modal.classList.remove('hidden');
+        }
+        function hideAppModal() {
+            const modal = document.getElementById('app-modal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.innerHTML = '';
+        }
+        function renderTransferSuccessCard() {
+            return `
+                <div class="bg-white rounded-2xl w-full px-6 pt-8 pb-6 text-center shadow-2xl">
+                    <div class="w-[72px] h-[72px] rounded-full border-[3px] border-blue-500 flex items-center justify-center mx-auto mb-5">
+                        <i class="fa-solid fa-check text-blue-500 text-[32px]"></i>
+                    </div>
+                    <h2 class="text-[22px] font-extrabold text-neutral-900 mb-2">Successful!</h2>
+                    <p class="text-[14px] text-gray-500 mb-6">Ticket Transfer was successful.</p>
+                    <button onclick="closeSuccessModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-lg text-[16px]">OK</button>
+                </div>
+            `;
+        }
+        function initSeatStateEmpty() {
+            const ev = events.find(e => e.id === activeEventId);
+            if (!ev) return;
+            selectedSeatsState = {};
+            for (let i = 0; i < ev.numTickets; i++) {
+                selectedSeatsState[ev.startSeat + i] = false;
+            }
+        }
+        function toggleSeatSelection(seatNum) {
+            selectedSeatsState[seatNum] = !selectedSeatsState[seatNum];
+            render();
+        }
+        function validateAndProceedTransfer() {
+            if (!appSettings.allowTransfer) {
+                alert("Ticket transfers are currently disabled by app settings.");
+                return;
+            }
+            const selectedCount = Object.values(selectedSeatsState).filter(Boolean).length;
+            const ev = events.find(e => e.id === activeEventId) || events[0];
+            const minReq = ev.minTransferLimit || 1;
+            if (selectedCount < minReq) {
+                lastFailedRecipient = { count: selectedCount, minRequired: minReq };
+                switchView('transfer-failed');
+                return;
+            }
+            if (selectedCount === 0) {
+                alert("Please select at least one ticket to transfer.");
+                return;
+            }
+            switchView('transfer-method');
+        }
+        function executeTransferSubmission() {
+            if (!appSettings.allowTransfer) {
+                alert("Ticket transfers are currently disabled.");
+                return;
+            }
+            const fName = document.getElementById('recipient-fname')?.value || recipientDraft.fname || 'Alex';
+            const lName = document.getElementById('recipient-lname')?.value || recipientDraft.lname || 'Smith';
+            const email = document.getElementById('recipient-email')?.value || 'recipient@gmail.com';
+            const selectedCount = Object.values(selectedSeatsState).filter(Boolean).length;
+            const ev = events.find(e => e.id === activeEventId) || events[0];
+            const minReq = ev.minTransferLimit || 1;
+            if (selectedCount < minReq) {
+                lastFailedRecipient = { name: `${fName} ${lName}`, email: email, count: selectedCount, minRequired: minReq };
+                addNotification(
+                    "Ticket Transfer Failed",
+                    `Transfer to ${fName} ${lName} (${email}) for ${ev.showTitle} could not be completed. Selected ${selectedCount} ticket(s), but event minimum requirement is ${minReq}.`,
+                    "Just now"
+                );
+                switchView('transfer-failed');
+                return;
+            }
+            addNotification(
+                "Transfer Pending Acceptance",
+                `You transferred tickets for ${ev.showTitle} to ${fName} ${lName} (${email}). Waiting for receiver to accept it.`,
+                "Just now"
+            );
+            switchView('transfer-success');
+        }
+        function closeSuccessModal() {
+            hideOtpToast();
+            hideAppModal();
+            switchView('details', activeEventId);
+        }
+        function showOtpToast() {
+            const toast = document.getElementById('otp-toast');
+            if (!toast) return;
+            toast.classList.remove('hidden');
+            if (otpToastTimer) clearTimeout(otpToastTimer);
+            otpToastTimer = setTimeout(() => {
+                hideOtpToast();
+            }, 2000);
+        }
+        function hideOtpToast() {
+            const toast = document.getElementById('otp-toast');
+            if (toast) toast.classList.add('hidden');
+            if (otpToastTimer) {
+                clearTimeout(otpToastTimer);
+                otpToastTimer = null;
+            }
+        }
+        function openTicketView(index = 0) {
+            activeTicketIndex = index;
+            switchView('barcode');
+        }
+        function shiftTicket(delta) {
+            const ev = events.find(e => e.id === activeEventId);
+            if (!ev || !ev.numTickets) return;
+            activeTicketIndex = (activeTicketIndex + delta + ev.numTickets) % ev.numTickets;
+            currentView = 'barcode';
+            render();
+        }
+        function barcodeBarsHtml(seed) {
+            const widths = [2,7,3,9,2,5,4,8,3,6,2,10,3,5,7,2,8,4,3,6,2,9,4,5,3,8,2,6,4,7,3,5];
+            return widths.map((w, i) => `<span class="${(seed + i) % 9 === 0 ? 'blue' : ''}" style="width:${w}px"></span>`).join('');
+        }
+        function downloadReceiptPDF() {
+            window.print();
+        }
+        function saveEventForm(event) {
+            event.preventDefault();
+            const locationVal = document.getElementById('form-location')?.value || 'Los Angeles, CA';
+            const countryVal = document.getElementById('form-country')?.value || 'United States';
+            const flagVal = document.getElementById('form-flagLink')?.value || '🇺🇸';
+            const domainVal = document.getElementById('form-domain')?.value || 'ticketmaster.com';
+            const minLimitVal = parseInt(document.getElementById('form-minLimit')?.value) || 1;
+            const isTrendingVal = document.getElementById('form-isTrending')?.checked || false;
+            if (isTrendingVal) {
+                events.forEach(e => e.isTrending = false);
+            }
+            const formData = {
+                id: editingEventId ? editingEventId : Date.now(),
+                showTitle: document.getElementById('form-showTitle').value,
+                ticketType: document.getElementById('form-ticketType').value,
+                look2Badge: document.getElementById('form-look2badge')?.value || 'Restricted View',
+                imageLink: document.getElementById('form-imageLink').value,
+                date: document.getElementById('form-date').value,
+                purchaseDate: document.getElementById('form-purchaseDate')?.value || '15 Sep 2026',
+                time: document.getElementById('form-time').value,
+                dayOfWeek: document.getElementById('form-dayOfWeek')?.value || 'Saturday',
+                country: countryVal,
+                domain: domainVal,
+                flagLink: flagVal,
+                location: locationVal,
+                venue: document.getElementById('form-venue').value,
+                sec: document.getElementById('form-sec').value,
+                row: document.getElementById('form-row').value,
+                startSeat: parseInt(document.getElementById('form-startSeat').value) || 36,
+                numTickets: parseInt(document.getElementById('form-numTickets').value) || 1,
+                minTransferLimit: minLimitVal,
+                username: document.getElementById('form-username').value,
+                orderNumber: document.getElementById('form-orderNumber').value,
+                phoneLast4: document.getElementById('form-phoneLast4')?.value || '3321',
+                mapQuery: encodeURIComponent(`${locationVal}+${document.getElementById('form-venue').value}`),
+                ticketPrice: 246.00,
+                bookingFee: 10.00,
+                gate: document.getElementById('form-gate')?.value || 'Gate 3 / Door A',
+                attendee: document.getElementById('form-attendee')?.value || document.getElementById('form-username').value,
+                importantInfo: "Each Mobile Ticket can only be used once. Please keep your tickets safe. Doors open 90 minutes before showtime.",
+                isTrending: isTrendingVal
+            };
+            if (editingEventId) {
+                const index = events.findIndex(e => e.id === editingEventId);
+                if (index !== -1) events[index] = formData;
+            } else {
+                events.unshift(formData);
+            }
+            saveEventsToStorage();
+            editingEventId = null;
+            switchView('help-modal');
+        }
+        function deleteEvent(id) {
+            if(confirm("Are you sure you want to permanently delete this event?")) {
+                events = events.filter(e => e.id !== id);
+                saveEventsToStorage();
+                switchView('help-modal');
+            }
+        }
+        function openManager(id = null) {
+            editingEventId = id;
+            switchView('manager');
+        }
+        function saveReceiptEdits(event) {
+            event.preventDefault();
+            const ev = events.find(e => e.id === activeEventId) || events[0];
+            if (ev) {
+                ev.orderNumber = document.getElementById('rec-ord').value;
+                ev.username = document.getElementById('rec-name').value;
+                ev.email = document.getElementById('rec-email').value;
+                ev.showTitle = document.getElementById('rec-title').value;
+                ev.date = document.getElementById('rec-date').value;
+                ev.purchaseDate = document.getElementById('rec-pdate').value;
+                ev.venue = document.getElementById('rec-venue').value;
+                ev.location = document.getElementById('rec-loc').value;
+                ev.sec = document.getElementById('rec-sec').value;
+                ev.row = document.getElementById('rec-row').value;
+                ev.startSeat = parseInt(document.getElementById('rec-seat').value) || 36;
+                ev.ticketType = document.getElementById('rec-type').value;
+                ev.ticketPrice = parseFloat(document.getElementById('rec-price').value) || 246.00;
+                ev.bookingFee = parseFloat(document.getElementById('rec-fee').value) || 10.00;
+                ev.gate = document.getElementById('rec-gate').value;
+                ev.attendee = document.getElementById('rec-attendee').value;
+                ev.importantInfo = document.getElementById('rec-info').value;
+                saveEventsToStorage();
+                alert('Receipt details updated successfully!');
+            }
+            switchView('receipt-preview');
+        }
+        function setCountryAndDomain(countryName, flagCode, domainName, cityName) {
+            events.forEach(e => {
+                e.country = countryName;
+                e.flagLink = flagCode;
+                e.domain = domainName;
+                e.location = cityName;
+            });
+            saveEventsToStorage();
+            switchView('account');
+        }
+        function renderLookTwoHeader() {
+            const activeEv = events.find(e => e.id === activeEventId) || events[0] || {};
+            return `
+                <div class="bg-blue-700 text-white px-3.5 py-2.5 flex justify-between items-center relative z-40">
+                    <div class="flex items-center space-x-2 text-[10px]">
+                        <span class="bg-red-600 px-1 py-0.5 rounded text-[9px] font-bold">${activeEv.flagLink || '🇺🇸'}</span>
+                        <span>EN</span>
+                    </div>
+                    <span class="font-black italic text-sm tracking-tight">ticketmaster</span>
+                    <div class="relative">
+                        <button onclick="showLookTwoMenuDropdown = !showLookTwoMenuDropdown; render();" class="w-7 h-7 bg-blue-800 text-white rounded-full flex items-center justify-center shadow">
+                            <i class="fa-solid fa-user text-xs"></i>
+                        </button>
+                        
+                        ${showLookTwoMenuDropdown ? `
+                            <div class="absolute right-0 top-9 w-44 bg-white text-neutral-900 rounded-lg shadow-2xl border border-gray-200 z-50 py-1 text-[11px]">
+                                <div class="px-3 py-2 border-b border-gray-100 font-bold text-gray-800 truncate">${activeEv.username || 'Chester leong'}</div>
+                                <button onclick="showLookTwoMenuDropdown = false; switchView('account');" class="w-full text-left px-3 py-2 hover:bg-gray-100 font-medium">My Profile</button>
+                                <button onclick="showLookTwoMenuDropdown = false; switchView('events');" class="w-full text-left px-3 py-2 hover:bg-gray-100 font-medium">My Tickets</button>
+                                <button onclick="showLookTwoMenuDropdown = false; switchView('notifications-view');" class="w-full text-left px-3 py-2 hover:bg-gray-100 font-medium">Transfer History</button>
+                                ${appSettings.allowTransfer ? `<button onclick="showLookTwoMenuDropdown = false; switchView('auth');" class="w-full text-left px-3 py-2 hover:bg-gray-100 font-medium text-blue-600 font-bold">Receive Transfer</button>` : ''}
+                                <button onclick="showLookTwoMenuDropdown = false; appSettings.useLookTwo = false; saveSettingsToStorage(); switchView('discover');" class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 font-bold border-t border-gray-100">Sign Out</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="bg-blue-800 px-3 pb-3 pt-1">
+                    <div class="bg-blue-900 text-white/80 rounded-xl px-3 py-2 flex justify-between items-center text-xs">
+                        <span>Search by Event</span>
+                        <i class="fa-solid fa-magnifying-glass text-white"></i>
+                    </div>
+                </div>
+            `;
+        }
+        function renderLookTwoFooter() {
+            return `
+                <div class="bg-black text-white px-4 py-8 space-y-6 text-xs mt-6 border-t border-neutral-800">
+                    <div>
+                        <div class="font-bold text-white mb-3 text-xs">Let's Connect</div>
+                        <div class="flex space-x-4 text-base">
+                            <i class="fa-brands fa-facebook-f"></i>
+                            <i class="fa-brands fa-x-twitter"></i>
+                            <i class="fa-brands fa-instagram"></i>
+                        </div>
+                    </div>
+                    <div class="text-[11px] text-gray-400 leading-relaxed border-t border-neutral-800 pt-4">
+                        By continuing past this page, you agree to our <span class="underline text-white">terms of use</span>
+                    </div>
+                    <div class="border-t border-neutral-800 divide-y divide-neutral-800 text-[11px]">
+                        <div class="py-3 flex justify-between items-center"><span>Categories</span><i class="fa-solid fa-chevron-down text-[10px]"></i></div>
+                        <div class="py-3 flex justify-between items-center"><span>Customer Care</span><i class="fa-solid fa-chevron-down text-[10px]"></i></div>
+                        <div class="py-3 flex justify-between items-center"><span>Be Part Of It</span><i class="fa-solid fa-chevron-down text-[10px]"></i></div>
+                        <div class="py-3 flex justify-between items-center"><span>Corporate</span><i class="fa-solid fa-chevron-down text-[10px]"></i></div>
+                    </div>
+                    <div class="pt-2 text-[10px] text-gray-500 space-x-2">
+                        <span class="underline">Purchase Policy</span> • <span class="underline">Privacy Policy</span> • <span class="underline">Cookies</span>
+                    </div>
+                    <div class="text-[10px] text-gray-500 pb-4">
+                        © 1999-2026 Ticketmaster. All rights reserved.
+                    </div>
+                </div>
+            `;
+        }
+        function render() {
+            const container = document.getElementById('app-view');
+            const safariFooter = document.getElementById('safari-footer');
+            const safariDomainText = document.getElementById('safari-domain-text');
+            if (!container) return;
+            const activeEv = events.find(e => e.id === activeEventId) || events[0] || {};
+            const visibleEvents = events.filter(e => !appSettings.hiddenEvents[e.id]);
+            if (safariDomainText) {
+                safariDomainText.innerText = activeEv.domain || 'ticketmaster.com';
+            }
+            if (currentView === 'transfer-success') {
+                showAppModal(renderTransferSuccessCard());
+            } else {
+                hideAppModal();
+            }
+            if (appSettings.useLookTwo) {
+                safariFooter.classList.remove('hidden');
+                container.classList.add('pb-12');
+            } else {
+                safariFooter.classList.add('hidden');
+                container.classList.add('pb-28');
+            }
+            if (appSettings.useLookTwo) {
+                if (currentView === 'events') {
+                    container.innerHTML = `
+                        <div class="bg-gray-100 min-h-full pb-16 text-[11px]">
+                            ${renderLookTwoHeader()}
+                            <div class="px-3 py-2 text-gray-500 text-[10px]">
+                                Home / <span class="text-neutral-800 font-bold">My Tickets</span>
+                            </div>
+                            <div class="px-3 space-y-3">
+                                ${visibleEvents.map(ev => `
+                                    <div onclick="switchView('details', ${ev.id})" class="bg-white rounded-2xl p-3.5 shadow-sm border border-gray-200 cursor-pointer flex justify-between items-center relative">
+                                        <div>
+                                            <div class="text-[9px] font-bold text-gray-400 mb-0.5">${ev.date} • ${ev.venue}</div>
+                                            <div class="font-black text-xs text-neutral-900 truncate max-w-[220px]">${ev.showTitle}</div>
+                                            <div class="text-[10px] text-blue-600 font-bold mt-1">Got Tickets (${ev.numTickets})</div>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ${renderLookTwoFooter()}
+                        </div>
+                    `;
+                } else if (currentView === 'account') {
+                    container.innerHTML = `
+                        <div class="bg-gray-100 min-h-full pb-20 text-xs">
+                            ${renderLookTwoHeader()}
+                            <div class="px-3 py-2 text-gray-500 text-[10px]">
+                                Home / <span class="text-neutral-800 font-bold">My Profile</span>
+                            </div>
+                            <div class="px-3 space-y-3">
+                                <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 flex items-center space-x-3">
+                                    <div class="w-12 h-12 bg-blue-600 text-white font-black text-base rounded-full flex items-center justify-center shadow">
+                                        ${(activeEv.username || 'C').charAt(0).toUpperCase()}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <h2 class="font-black text-xs text-neutral-900 truncate">${activeEv.username || 'Chester leong'}</h2>
+                                        <p class="text-[10px] text-gray-500 truncate">${activeEv.email || 'chesterleong875@gmail.com'}</p>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200 divide-y divide-gray-100">
+                                    <div onclick="switchView('notifications-view')" class="p-3.5 flex justify-between items-center cursor-pointer hover:bg-gray-50">
+                                        <div class="flex items-center space-x-3">
+                                            <i class="fa-regular fa-bell text-blue-600 text-sm"></i>
+                                            <span class="font-bold text-neutral-900">Notifications Inbox</span>
+                                        </div>
+                                        <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
+                                    </div>
+                                    <div onclick="switchView('country-modal')" class="p-3.5 flex justify-between items-center cursor-pointer hover:bg-gray-50">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="text-sm">${activeEv.flagLink || '🇺🇸'}</span>
+                                            <span class="font-bold text-neutral-900">Country & Region (${activeEv.country || 'United States'})</span>
+                                        </div>
+                                        <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
+                                    </div>
+                                    <div onclick="switchView('help-modal')" class="p-3.5 flex justify-between items-center cursor-pointer hover:bg-gray-50">
+                                        <div class="flex items-center space-x-3">
+                                            <i class="fa-solid fa-sliders text-neutral-700 text-sm"></i>
+                                            <span class="font-bold text-neutral-900">App Controls & Settings</span>
+                                        </div>
+                                        <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            ${renderLookTwoFooter()}
+                        </div>
+                    `;
+                } else if (currentView === 'country-modal') {
+                    container.innerHTML = `
+                        <div class="bg-white min-h-full flex flex-col justify-between text-xs">
+                            <div>
+                                <div class="flex justify-between items-center px-4 py-3 bg-black text-white border-b border-neutral-900">
+                                    <button onclick="switchView('account')" class="text-white"><i class="fa-solid fa-arrow-left"></i></button>
+                                    <span class="font-bold text-xs">Select Country & Domain</span>
+                                    <div class="w-4"></div>
+                                </div>
+                                <div class="p-4 space-y-2">
+                                    <p class="text-[11px] text-gray-500 mb-3">Choose your Ticketmaster region and active web domain:</p>
+                                    <div onclick="setCountryAndDomain('United States', '🇺🇸', 'ticketmaster.com', 'Los Angeles, CA')" class="p-3.5 border ${activeEv.country === 'United States' ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200'} rounded-xl flex items-center justify-between cursor-pointer shadow-sm">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="text-xl">🇺🇸</span>
+                                            <div>
+                                                <div class="font-bold text-gray-900">United States</div>
+                                                <div class="text-[10px] text-gray-500">ticketmaster.com</div>
+                                            </div>
+                                        </div>
+                                        ${activeEv.country === 'United States' ? '<i class="fa-solid fa-check text-blue-600"></i>' : ''}
+                                    </div>
+                                    <div onclick="setCountryAndDomain('Singapore', '🇸🇬', 'ticketmaster.sg', 'Singapore')" class="p-3.5 border ${activeEv.country === 'Singapore' ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200'} rounded-xl flex items-center justify-between cursor-pointer shadow-sm">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="text-xl">🇸🇬</span>
+                                            <div>
+                                                <div class="font-bold text-gray-900">Singapore</div>
+                                                <div class="text-[10px] text-gray-500">ticketmaster.sg</div>
+                                            </div>
+                                        </div>
+                                        ${activeEv.country === 'Singapore' ? '<i class="fa-solid fa-check text-blue-600"></i>' : ''}
+                                    </div>
+                                    <div onclick="setCountryAndDomain('Philippines', '🇵🇭', 'ticketmaster.ph', 'Manila')" class="p-3.5 border ${activeEv.country === 'Philippines' ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200'} rounded-xl flex items-center justify-between cursor-pointer shadow-sm">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="text-xl">🇵🇭</span>
+                                            <div>
+                                                <div class="font-bold text-gray-900">Philippines</div>
+                                                <div class="text-[10px] text-gray-500">ticketmaster.ph</div>
+                                            </div>
+                                        </div>
+                                        ${activeEv.country === 'Philippines' ? '<i class="fa-solid fa-check text-blue-600"></i>' : ''}
+                                    </div>
+                                    <div onclick="setCountryAndDomain('Malaysia', '🇲🇾', 'ticketmaster.my', 'Kuala Lumpur')" class="p-3.5 border ${activeEv.country === 'Malaysia' ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200'} rounded-xl flex items-center justify-between cursor-pointer shadow-sm">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="text-xl">🇲🇾</span>
+                                            <div>
+                                                <div class="font-bold text-gray-900">Malaysia</div>
+                                                <div class="text-[10px] text-gray-500">ticketmaster.my</div>
+                                            </div>
+                                        </div>
+                                        ${activeEv.country === 'Malaysia' ? '<i class="fa-solid fa-check text-blue-600"></i>' : ''}
+                                    </div>
+                                    <div onclick="setCountryAndDomain('United Kingdom', '🇬🇧', 'ticketmaster.co.uk', 'London')" class="p-3.5 border ${activeEv.country === 'United Kingdom' ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200'} rounded-xl flex items-center justify-between cursor-pointer shadow-sm">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="text-xl">🇬🇧</span>
+                                            <div>
+                                                <div class="font-bold text-gray-900">United Kingdom</div>
+                                                <div class="text-[10px] text-gray-500">ticketmaster.co.uk</div>
+                                            </div>
+                                        </div>
+                                        ${activeEv.country === 'United Kingdom' ? '<i class="fa-solid fa-check text-blue-600"></i>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-white border-t border-gray-200">
+                                <button onclick="switchView('account')" class="w-full bg-black text-white font-bold py-3 rounded-xl shadow">Back to My Account</button>
+                            </div>
+                        </div>
+                    `;
+                } else if (currentView === 'details' || currentView === 'transfer-success') {
+                    const orderNumDisplayClass = appSettings.blurReference ? 'filter blur-sm select-none transition' : 'transition';
+                    container.innerHTML = `
+                        <div class="bg-white text-neutral-900 pb-16 min-h-full relative text-[11px]">
+                            ${renderLookTwoHeader()}
+                            
+                            <div class="px-4 py-2.5 text-[10px] text-gray-700 flex justify-between items-center bg-white border-b border-gray-100">
+                                <span>Home / My Tickets / Mobile Tickets</span>
+                                <button onclick="switchView('help-modal')" class="font-bold text-blue-600">Help</button>
+                            </div>
+                            <div class="px-4 py-3 bg-white">
+                                <div class="text-lg font-black tracking-wider uppercase text-neutral-900 mb-1">MOBILE TICKETS</div>
+                                <div class="w-8 h-1 bg-black mb-3"></div>
+                                <p class="text-[10px] text-neutral-900 font-medium leading-snug">Each Mobile Ticket can only be used once. Please keep your tickets safe.</p>
+                            </div>
+                            <div class="px-3 space-y-3 mt-1">
+                                <div class="bg-white rounded-2xl p-3 border border-gray-200 shadow-sm flex justify-between items-center">
+                                    <div>
+                                        <div class="text-[9px] font-bold text-gray-400 uppercase">Order Reference</div>
+                                        <div class="font-mono font-bold text-xs ${orderNumDisplayClass}">#${activeEv.orderNumber}</div>
+                                    </div>
+                                </div>
+                                ${Array.from({length: activeEv.numTickets}, (_, i) => {
+                                    const seatNum = activeEv.startSeat + i;
+                                    return `
+                                        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative mb-4">
+                                            <div class="h-4 w-full bg-gradient-to-r from-purple-700 via-indigo-600 to-teal-400 flex items-center px-3 space-x-1 overflow-hidden">
+                                                <span class="text-[7px] text-white/90 font-mono tracking-tight">ticketmaster • ticketmaster • ticketmaster • ticketmaster • ticketmaster</span>
+                                            </div>
+                                            <div class="p-4 space-y-3">
+                                                <h2 class="text-xs font-black text-neutral-900 leading-snug">${activeEv.showTitle}</h2>
+                                                <div class="space-y-1.5 text-[11px] text-neutral-800">
+                                                    <div class="flex items-center space-x-2">
+                                                        <i class="fa-solid fa-location-dot text-blue-600 text-xs"></i>
+                                                        <span class="font-bold text-neutral-900">${activeEv.venue}</span>
+                                                    </div>
+                                                    <div class="flex items-center space-x-2">
+                                                        <i class="fa-regular fa-calendar text-blue-600 text-xs"></i>
+                                                        <span class="font-medium text-neutral-800">${activeEv.date}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="flex justify-between items-center pt-2 border-t border-gray-100 text-xs">
+                                                    <div class="flex items-center space-x-1.5">
+                                                        <span class="w-2.5 h-2.5 bg-blue-600 rounded-full inline-block"></span>
+                                                        <span class="font-bold text-neutral-900">${activeEv.look2Badge || 'Restricted View'}</span>
+                                                    </div>
+                                                    <span class="font-bold text-neutral-900 text-sm">\$${(activeEv.ticketPrice || 246.00).toFixed(2)}</span>
+                                                </div>
+                                                <div class="bg-gray-50/80 p-3 rounded-xl border border-gray-200 space-y-1">
+                                                    <div class="text-[9px] font-black text-blue-700 tracking-wider uppercase">TICKET CATEGORY</div>
+                                                    <div class="font-black text-xs text-neutral-900">${activeEv.ticketType}</div>
+                                                </div>
+                                                <div class="grid grid-cols-2 pt-1 border-t border-gray-200 divide-x divide-gray-200">
+                                                    <div class="pr-3">
+                                                        <div class="text-[9px] font-black text-blue-700 uppercase tracking-wider mb-0.5">SECTION</div>
+                                                        <div class="font-black text-base text-neutral-900">${activeEv.sec}</div>
+                                                    </div>
+                                                    <div class="pl-3">
+                                                        <div class="text-[9px] font-black text-blue-700 uppercase tracking-wider mb-0.5">TICKET INFO</div>
+                                                        <div class="font-black text-xs text-neutral-900">${activeEv.row}</div>
+                                                        <div class="font-black text-xs text-neutral-900">Seat ${seatNum}</div>
+                                                    </div>
+                                                </div>
+                                                <div class="pt-2 border-t border-gray-200">
+                                                    <div class="text-[9px] font-black text-blue-700 uppercase tracking-wider mb-0.5">GATE / DOOR</div>
+                                                    <div class="text-neutral-900 font-semibold text-xs">${activeEv.gate || 'Gate 3 / Door A'}</div>
+                                                </div>
+                                                <div class="pt-2 border-t border-gray-200">
+                                                    <div class="text-[9px] font-black text-blue-700 uppercase tracking-wider mb-0.5">Attendee Name</div>
+                                                    <div class="text-neutral-900 font-semibold text-xs">${activeEv.attendee || 'Chester leong'}</div>
+                                                </div>
+                                                <button onclick="openTicketView(${i})" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-[11px] shadow mt-2">
+                                                    Print-at-Home / Barcode
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            ${renderLookTwoFooter()}
+                        </div>
+                    `;
+                } else if (currentView === 'receipt-preview') {
+                    const orderNumDisplayClass = appSettings.blurReference ? 'filter blur-sm select-none transition' : 'transition';
+                    container.innerHTML = `
+                        <div class="bg-white text-neutral-900 min-h-full pb-16 text-[11px] select-none">
+                            <div class="flex justify-between items-center px-4 py-2.5 bg-neutral-900 text-white border-b border-neutral-800 text-xs">
+                                <button onclick="switchView('help-modal')" class="text-gray-300 font-bold"><i class="fa-solid fa-chevron-left text-sm"></i> Help</button>
+                                <span class="font-mono text-[10px] text-gray-400">${activeEv.domain || 'ticketmaster.com'}</span>
+                                <div class="flex space-x-3 text-gray-300">
+                                    <button onclick="downloadReceiptPDF()" title="Download Receipt" class="text-blue-400 font-bold flex items-center space-x-1"><i class="fa-solid fa-download"></i></button>
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                    <i class="fa-regular fa-envelope text-xs"></i>
+                                </div>
+                            </div>
+                            <div class="relative w-full h-44 bg-cover bg-center flex flex-col justify-center items-center text-center p-4" style="background-image: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.85) 85%, black 100%), url('${activeEv.imageLink}');">
+                                <div class="w-14 h-14 rounded-full border-2 border-white/80 bg-cover bg-center shadow-lg mb-2" style="background-image: url('${activeEv.imageLink}');"></div>
+                                <h1 class="text-lg font-black italic tracking-wide text-white drop-shadow-md">You Got the Tickets</h1>
+                                <p class="text-xs font-mono font-bold text-gray-200 mt-0.5">Order #<span class="${orderNumDisplayClass}">${activeEv.orderNumber}</span></p>
+                            </div>
+                            <div class="bg-white text-neutral-900 px-4 py-4 space-y-4">
+                                <div class="flex space-x-3 items-center border-b border-gray-100 pb-3">
+                                    <div class="w-16 h-16 rounded-xl bg-cover bg-center flex-shrink-0 shadow" style="background-image: url('${activeEv.imageLink}');"></div>
+                                    <div class="flex-1 min-w-0">
+                                        <h2 class="text-xs font-black text-neutral-900 leading-snug">${activeEv.showTitle}</h2>
+                                        <div class="text-[10px] text-gray-500 font-medium mt-0.5 flex items-center space-x-1">
+                                            <i class="fa-regular fa-calendar text-[9px] text-blue-600"></i>
+                                            <span>${activeEv.date}</span>
+                                        </div>
+                                        <div class="text-[10px] text-gray-500 font-medium mt-0.5 flex items-center space-x-1">
+                                            <i class="fa-solid fa-location-dot text-[9px] text-blue-600"></i>
+                                            <span class="truncate">${activeEv.venue}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between text-[11px] text-blue-600 font-bold border-b border-gray-100 pb-3">
+                                    <a href="https://www.google.com/maps/search/?api=1&query=${activeEv.mapQuery || 'National+Stadium'}" target="_blank" class="flex items-center space-x-1.5">
+                                        <i class="fa-solid fa-diamond-turn-right"></i>
+                                        <span>Get Directions</span>
+                                    </a>
+                                    <span class="text-gray-900 font-black">${activeEv.ticketType}</span>
+                                </div>
+                                <button onclick="switchView('details')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs shadow">
+                                    View Mobile Ticket
+                                </button>
+                                <div class="border border-blue-200 bg-blue-50/30 rounded-xl p-3.5 space-y-2">
+                                    <div class="flex items-center space-x-2 text-blue-900 font-bold text-xs">
+                                        <i class="fa-solid fa-circle-info text-blue-600"></i>
+                                        <span>Important Information</span>
+                                    </div>
+                                    <div class="text-[10px] font-bold text-neutral-900">Important Event Info</div>
+                                    <p class="text-[10px] text-gray-700 leading-relaxed">
+                                        ${activeEv.importantInfo || 'Each Mobile Ticket can only be used once. Please keep your tickets safe.'}
+                                    </p>
+                                </div>
+                                <div class="pt-2 flex space-x-2">
+                                    <button onclick="downloadReceiptPDF()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs shadow flex items-center justify-center space-x-1.5">
+                                        <i class="fa-solid fa-download"></i><span>Download Receipt</span>
+                                    </button>
+                                    <button onclick="switchView('receipt-edit')" class="bg-neutral-900 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold">Edit</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (currentView === 'receipt-edit') {
+                    container.innerHTML = `
+                        <div class="bg-neutral-900 text-white min-h-full p-4 flex flex-col justify-between text-xs">
+                            <div>
+                                <div class="flex justify-between items-center border-b border-neutral-800 pb-2.5 mb-3">
+                                    <h2 class="text-xs font-bold">Edit Receipt Details</h2>
+                                    <button onclick="switchView('receipt-preview')" class="text-xs text-gray-400 font-bold">✕ Cancel</button>
+                                </div>
+                                <form onsubmit="saveReceiptEdits(event)" class="space-y-2.5 text-[11px]">
+                                    <div><label class="block text-gray-400 font-bold mb-0.5">Order Number:</label><input type="text" id="rec-ord" value="${activeEv.orderNumber}" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white"></div>
+                                    <div><label class="block text-gray-400 font-bold mb-0.5">Purchaser Name:</label><input type="text" id="rec-name" value="${activeEv.username}" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white"></div>
+                                    <div><label class="block text-gray-400 font-bold mb-0.5">Email:</label><input type="text" id="rec-email" value="${activeEv.email}" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white"></div>
+                                    <div><label class="block text-gray-400 font-bold mb-0.5">Show Title / Tour:</label><input type="text" id="rec-title" value="${activeEv.showTitle}" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white"></div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div><label class="block text-gray-400 font-bold mb-0.5">Show Date & Time:</label><input type="text" id="rec-date" value="${activeEv.date}" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white"></div>
+                                        <div><label class="block text-gray-400 font-bold mb-0.5">Purchase Date:</label><input type="text" id="rec-pdate" value="${activeEv.purchaseDate || '15 Sep 2026'}" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white"></div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div><label class="block text-gray-400 font-bold mb-0.5">Venue:</label><input type="text" id="rec-venue" value="${activeEv.venue}" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white"></div>
+                                        <div><label class="block text-gray-400 font-bold mb-0.5">Location / City:</label><input type="text" id="rec-loc" value="${activeEv.location}" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white"></div>
+                                    </div>
+                                    <div><label class="block text-gray-400 font-bold mb-0.5">Ticket Type Label:</label><input type="text" id="rec-type" value="${activeEv.ticketType}" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white"></div>
+                                    <div><label class="block text-gray-400 font-bold mb-0.5">Important Information Box Text:</label><textarea id="rec-info" class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white h-16">${activeEv.importantInfo || ''}</textarea></div>
+                                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl mt-3 shadow uppercase tracking-wider">Save Receipt Updates</button>
+                                </form>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    const featuredEv = visibleEvents.find(e => e.isTrending) || visibleEvents[0] || events[0] || {};
+                    container.innerHTML = `
+                        <div class="bg-gray-100 min-h-full pb-16 text-[11px]">
+                            ${renderLookTwoHeader()}
+                            <div class="px-3 py-2 text-gray-500 text-[10px]">
+                                Home / <span class="text-neutral-800 font-bold">Discover</span>
+                            </div>
+                            <div class="px-3">
+                                <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200">
+                                    <div class="p-3.5 space-y-2">
+                                        <div class="text-[9px] text-gray-400 font-bold">${featuredEv.date} • ${featuredEv.venue}</div>
+                                        <h2 class="text-xs font-black text-gray-900 leading-snug">${featuredEv.showTitle}</h2>
+                                        <button onclick="switchView('details', ${featuredEv.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-[11px] shadow">View Ticket Details</button>
+                                    </div>
+                                </div>
+                            </div>
+                            ${renderLookTwoFooter()}
+                        </div>
+                    `;
+                }
+            } else {
+                renderStandardSubViews(container, activeEv, visibleEvents);
+            }
+        }
+        function renderStandardSubViews(container, activeEv, visibleEvents) {
+            if (currentView === 'discover') {
+                const featuredEv = visibleEvents.find(e => e.isTrending) || visibleEvents[0] || events[0] || {};
+                container.innerHTML = `
+                    <div class="bg-black text-white pb-5">
+                        <div class="px-4 py-2.5 flex justify-between items-center border-b border-neutral-900">
+                            <span class="italic font-black text-base tracking-tight">ticketmaster</span>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm">${featuredEv.flagLink || '🇺🇸'}</span>
+                            </div>
+                        </div>
+                        <div class="px-4 py-2.5 flex justify-between items-center text-xs text-gray-300">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-location-dot text-xs"></i>
+                                <div>
+                                    <div class="text-[8px] font-bold text-gray-400 uppercase tracking-wider">LOCATION</div>
+                                    <div class="font-bold text-white text-[10px]">${featuredEv.country || 'United States'}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2 text-right">
+                                <i class="fa-regular fa-calendar text-xs"></i>
+                                <div>
+                                    <div class="text-[8px] font-bold text-gray-400 uppercase tracking-wider">DATES</div>
+                                    <div class="font-bold text-white text-[10px]">All Dates <i class="fa-solid fa-chevron-down text-[8px] ml-0.5"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="px-3 my-1.5">
+                            <div class="bg-white rounded-xl p-2.5 flex justify-between items-center text-gray-400 shadow-inner">
+                                <div class="text-xs">
+                                    <div class="text-[8px] font-black text-gray-400 tracking-wider uppercase">SEARCH</div>
+                                    <div class="text-gray-800 font-medium text-[11px]">Artist, Event or Venue</div>
+                                </div>
+                                <i class="fa-solid fa-magnifying-glass text-blue-600 text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="relative mt-2 h-56 bg-cover bg-center overflow-hidden" style="background-image: linear-gradient(to top, rgba(0,0,0,0.95) 10%, rgba(0,0,0,0.2) 60%), url('${featuredEv.imageLink}');">
+                            <div class="absolute top-2.5 left-2.5 right-2.5 flex space-x-1.5 overflow-x-auto text-[10px] font-bold">
+                                <span class="bg-black/60 border border-white/40 px-2.5 py-0.5 rounded">Trending</span>
+                                <span class="bg-black/60 border border-white/40 px-2.5 py-0.5 rounded">Concert</span>
+                                <span class="bg-black/60 border border-white/40 px-2.5 py-0.5 rounded">Sports</span>
+                            </div>
+                            <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+                                <div>
+                                    <h2 class="text-sm font-black italic tracking-wide text-white drop-shadow-md leading-tight">${featuredEv.showTitle}</h2>
+                                    <button onclick="switchView('details', ${featuredEv.id})" class="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] px-3.5 py-1.5 rounded-lg shadow-lg">
+                                        Find Tickets
+                                    </button>
+                                </div>
+                                <div class="w-7 h-7 bg-white text-black rounded-full flex items-center justify-center shadow-lg cursor-pointer">
+                                    <i class="fa-solid fa-play text-[10px] pl-0.5"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white text-gray-900 pt-4 pb-3 px-3 mt-1.5">
+                            <h3 class="text-center text-xs font-black tracking-widest uppercase text-gray-900 mb-3">POPULAR NEAR YOU</h3>
+                            <div class="grid grid-cols-2 gap-2.5">
+                                <div class="h-28 rounded-xl overflow-hidden relative bg-cover bg-center shadow-sm flex items-center justify-center text-white" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80');">
+                                    <span class="text-2xl font-black italic">50%</span>
+                                </div>
+                                <div class="h-28 rounded-xl overflow-hidden relative bg-cover bg-center shadow-sm flex items-end p-2 text-white" style="background-image: linear-gradient(to top, rgba(0,0,0,0.9), transparent), url('https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80');">
+                                    <span class="text-[11px] font-bold leading-tight">Live Night Concert</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentView === 'events') {
+                container.innerHTML = `
+                    <div class="bg-black text-white sticky top-0 z-20">
+                        <div class="flex justify-between items-center px-4 py-2.5 border-b border-neutral-900 bg-black">
+                            <div class="w-8"></div>
+                            <div class="flex items-center space-x-1.5">
+                                <span class="font-bold text-xs tracking-wide">My Events</span>
+                                <span class="text-xs">${activeEv.flagLink || '🇺🇸'}</span>
+                            </div>
+                            <div class="w-8"></div>
+                        </div>
+                        <div class="flex text-[11px] font-bold bg-black border-b border-neutral-800">
+                            <div class="w-1/2 text-center py-2.5 border-b-2 border-white text-white">UPCOMING (${visibleEvents.length})</div>
+                            <div class="w-1/2 text-center py-2.5 text-gray-500">PAST (3)</div>
+                        </div>
+                    </div>
+                    <div class="px-3 py-3 space-y-4 bg-gray-100 min-h-[450px]">
+                        ${visibleEvents.length === 0 ? '<p class="text-center text-gray-400 text-xs py-12">No visible events found.</p>' : ''}
+                        ${visibleEvents.map(ev => `
+                            <div onclick="switchView('details', ${ev.id})" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden cursor-pointer hover:border-blue-500 transition relative">
+                                <div class="bg-neutral-900 h-36 flex flex-col items-start justify-end text-white p-3.5 relative bg-cover bg-center" style="background-image: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.2) 65%), url('${ev.imageLink}');">
+                                    <span class="text-[9px] text-gray-300 font-medium mb-1">${ev.date} • ${ev.time}</span>
+                                    <h2 class="text-xs font-black tracking-wide leading-snug line-clamp-2 uppercase">${ev.showTitle}</h2>
+                                </div>
+                                <div class="p-3 bg-white flex justify-between items-center text-[11px] font-semibold text-gray-800 border-t border-gray-100">
+                                    <div class="flex items-center space-x-1.5">
+                                        <i class="fa-solid fa-location-dot text-gray-400 text-[10px]"></i>
+                                        <span>${ev.venue} (${ev.location})</span>
+                                    </div>
+                                    <div class="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center space-x-1 shadow-sm">
+                                        <i class="fa-solid fa-ticket text-[9px]"></i>
+                                        <span>Got Tickets (${ev.numTickets})</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else if (currentView === 'account') {
+                container.innerHTML = `
+                    <div class="bg-white min-h-full pb-20 text-[13px] select-none">
+                        <div class="bg-[#6366f1] text-white py-3.5 px-4 flex items-center justify-between shadow-sm">
+                            <div class="w-7 h-7 flex items-center justify-center cursor-pointer" onclick="switchView('help-modal')">
+                                <i class="fa-solid fa-bars text-white text-base"></i>
+                            </div>
+                            <span class="font-bold text-sm tracking-wide">My Account</span>
+                            <div class="w-7"></div>
+                        </div>
+
+                        <div class="bg-black text-white px-5 py-4 border-b border-neutral-800">
+                            <h1 class="text-base font-bold text-white">${activeEv.username || 'Chester leong'}</h1>
+                            <p class="text-[12px] text-gray-400 mt-0.5">${activeEv.email || 'chesterleong875@gmail.com'}</p>
+                        </div>
+                        
+                        <div class="px-4 py-2 space-y-5 text-gray-900">
+                            <div class="pt-2">
+                                <div class="text-[11px] font-bold text-gray-900 mb-1 tracking-wide">Notifications</div>
+                                <div class="divide-y divide-gray-100">
+                                    <div onclick="switchView('notifications-view')" class="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="relative">
+                                                <i class="fa-regular fa-envelope text-red-600 text-[15px]"></i>
+                                                ${userNotifications.some(n => n.unread) ? '<span class="absolute -top-1 -right-1 w-2 h-2 bg-red-600 rounded-full"></span>' : ''}
+                                            </div>
+                                            <span class="font-normal text-xs text-neutral-900">My Notifications</span>
+                                        </div>
+                                        <i class="fa-solid fa-arrow-up-right-from-square text-[11px] text-blue-600"></i>
+                                    </div>
+                                    <div class="py-3 flex justify-between items-center">
+                                        <div class="flex items-center space-x-3">
+                                            <i class="fa-regular fa-bell text-neutral-700 text-[15px]"></i>
+                                            <span class="font-normal text-xs text-neutral-900">Receive Notifications?</span>
+                                        </div>
+                                        <div class="w-11 h-6 bg-blue-600 rounded-full p-0.5 flex items-center justify-end cursor-pointer shadow-inner">
+                                            <div class="w-5 h-5 bg-white rounded-full shadow-md"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <hr class="border-gray-100 my-1">
+
+                            <div>
+                                <div class="text-[11px] font-bold text-gray-900 mb-1 tracking-wide">Location Settings</div>
+                                <div class="divide-y divide-gray-100">
+                                    <div class="py-3 flex justify-between items-center">
+                                        <div class="flex items-center space-x-3">
+                                            <i class="fa-solid fa-location-dot text-neutral-700 text-[15px]"></i>
+                                            <span class="font-normal text-xs text-neutral-900">Location</span>
+                                        </div>
+                                        <div class="flex items-center space-x-1.5 text-blue-600 text-xs">
+                                            <span>${activeEv.location || 'Los Angeles, CA'}</span>
+                                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                                        </div>
+                                    </div>
+                                    <div onclick="switchView('country-modal')" class="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="text-base">${activeEv.flagLink || '🇺🇸'}</span>
+                                            <span class="font-normal text-xs text-neutral-900">My Country</span>
+                                        </div>
+                                        <div class="flex items-center space-x-1.5 text-blue-600 text-xs">
+                                            <span>${activeEv.country || 'United States'}</span>
+                                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="border-gray-100 my-1">
+
+                            <div>
+                                <div class="text-[11px] font-bold text-gray-900 mb-1 tracking-wide">Preferences</div>
+                                <div class="divide-y divide-gray-100">
+                                    <div onclick="switchView('events')" class="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50">
+                                        <div class="flex items-center space-x-3">
+                                            <i class="fa-regular fa-heart text-neutral-700 text-[15px]"></i>
+                                            <span class="font-normal text-xs text-neutral-900">My Favorites</span>
+                                        </div>
+                                        <i class="fa-solid fa-arrow-up-right-from-square text-[11px] text-blue-600"></i>
+                                    </div>
+                                    <div class="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50">
+                                        <div class="flex items-center space-x-3">
+                                            <i class="fa-regular fa-credit-card text-neutral-700 text-[15px]"></i>
+                                            <span class="font-normal text-xs text-neutral-900">Saved Payment Methods</span>
+                                        </div>
+                                        <i class="fa-solid fa-arrow-up-right-from-square text-[11px] text-blue-600"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentView === 'country-modal') {
+                container.innerHTML = `
+                    <div class="bg-white min-h-full flex flex-col justify-between text-xs">
+                        <div>
+                            <div class="flex justify-between items-center px-4 py-3 bg-black text-white border-b border-neutral-900">
+                                <button onclick="switchView('account')" class="text-white"><i class="fa-solid fa-arrow-left"></i></button>
+                                <span class="font-bold text-xs">Select Country & Domain</span>
+                                <div class="w-4"></div>
+                            </div>
+                            <div class="p-4 space-y-2">
+                                <p class="text-[11px] text-gray-500 mb-3">Choose your Ticketmaster region and active web domain:</p>
+                                <div onclick="setCountryAndDomain('United States', '🇺🇸', 'ticketmaster.com', 'Los Angeles, CA')" class="p-3.5 border ${activeEv.country === 'United States' ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200'} rounded-xl flex items-center justify-between cursor-pointer shadow-sm">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="text-xl">🇺🇸</span>
+                                        <div>
+                                            <div class="font-bold text-gray-900">United States</div>
+                                            <div class="text-[10px] text-gray-500">ticketmaster.com</div>
+                                        </div>
+                                    </div>
+                                    ${activeEv.country === 'United States' ? '<i class="fa-solid fa-check text-blue-600"></i>' : ''}
+                                </div>
+                                <div onclick="setCountryAndDomain('Singapore', '🇸🇬', 'ticketmaster.sg', 'Singapore')" class="p-3.5 border ${activeEv.country === 'Singapore' ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200'} rounded-xl flex items-center justify-between cursor-pointer shadow-sm">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="text-xl">🇸🇬</span>
+                                        <div>
+                                            <div class="font-bold text-gray-900">Singapore</div>
+                                            <div class="text-[10px] text-gray-500">ticketmaster.sg</div>
+                                        </div>
+                                    </div>
+                                    ${activeEv.country === 'Singapore' ? '<i class="fa-solid fa-check text-blue-600"></i>' : ''}
+                                </div>
+                                <div onclick="setCountryAndDomain('Philippines', '🇵🇭', 'ticketmaster.ph', 'Manila')" class="p-3.5 border ${activeEv.country === 'Philippines' ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200'} rounded-xl flex items-center justify-between cursor-pointer shadow-sm">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="text-xl">🇵🇭</span>
+                                        <div>
+                                            <div class="font-bold text-gray-900">Philippines</div>
+                                            <div class="text-[10px] text-gray-500">ticketmaster.ph</div>
+                                        </div>
+                                    </div>
+                                    ${activeEv.country === 'Philippines' ? '<i class="fa-solid fa-check text-blue-600"></i>' : ''}
+                                </div>
+                                <div onclick="setCountryAndDomain('Malaysia', '🇲🇾', 'ticketmaster.my', 'Kuala Lumpur')" class="p-3.5 border ${activeEv.country === 'Malaysia' ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200'} rounded-xl flex items-center justify-between cursor-pointer shadow-sm">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="text-xl">🇲🇾</span>
+                                        <div>
+                                            <div class="font-bold text-gray-900">Malaysia</div>
+                                            <div class="text-[10px] text-gray-500">ticketmaster.my</div>
+                                        </div>
+                                    </div>
+                                    ${activeEv.country === 'Malaysia' ? '<i class="fa-solid fa-check text-blue-600"></i>' : ''}
+                                </div>
+                                <div onclick="setCountryAndDomain('United Kingdom', '🇬🇧', 'ticketmaster.co.uk', 'London')" class="p-3.5 border ${activeEv.country === 'United Kingdom' ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200'} rounded-xl flex items-center justify-between cursor-pointer shadow-sm">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="text-xl">🇬🇧</span>
+                                        <div>
+                                            <div class="font-bold text-gray-900">United Kingdom</div>
+                                            <div class="text-[10px] text-gray-500">ticketmaster.co.uk</div>
+                                        </div>
+                                    </div>
+                                    ${activeEv.country === 'United Kingdom' ? '<i class="fa-solid fa-check text-blue-600"></i>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 bg-white border-t border-gray-200">
+                            <button onclick="switchView('account')" class="w-full bg-black text-white font-bold py-3 rounded-xl shadow">Back to My Account</button>
+                        </div>
+                    </div>
+                `;
+            } else if (currentView === 'help-modal') {
+                container.innerHTML = `
+                    <div class="bg-neutral-900 text-white min-h-full p-4 flex flex-col justify-between text-xs">
+                        <div>
+                            <div class="flex justify-between items-center border-b border-neutral-800 pb-2.5 mb-3">
+                                <h2 class="text-xs font-bold">Help & All App Controls</h2>
+                                <button onclick="switchView('account')" class="text-xs text-gray-400 font-bold">✕ Close</button>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                <div class="bg-blue-900/40 border border-blue-500/50 p-3 rounded-xl flex justify-between items-center">
+                                    <div>
+                                        <div class="font-bold text-white text-[11px]">View Order Receipt</div>
+                                        <div class="text-[9px] text-blue-200">Email style receipt (#${activeEv.orderNumber})</div>
+                                    </div>
+                                    <button onclick="switchView('receipt-preview')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] shadow">View Receipt</button>
+                                </div>
+                                <div class="bg-neutral-800 p-2.5 rounded-xl flex justify-between items-center">
+                                    <div>
+                                        <div class="font-bold text-white text-[11px]">Enable / Disable Ticket Transfers</div>
+                                        <div class="text-[9px] text-gray-400">Controls transfer availability across app</div>
+                                    </div>
+                                    <button onclick="appSettings.allowTransfer = !appSettings.allowTransfer; saveSettingsToStorage(); render();" class="w-9 h-4.5 ${appSettings.allowTransfer ? 'bg-blue-600 justify-end' : 'bg-neutral-600 justify-start'} rounded-full p-0.5 flex items-center transition cursor-pointer">
+                                        <div class="w-3.5 h-3.5 bg-white rounded-full shadow-md"></div>
+                                    </button>
+                                </div>
+                                <div class="bg-neutral-800 p-2.5 rounded-xl flex justify-between items-center">
+                                    <div>
+                                        <div class="font-bold text-white text-[11px]">Switch to Look 2 Mode</div>
+                                        <div class="text-[9px] text-gray-400">Enables exact Safari browser & video layout</div>
+                                    </div>
+                                    <button onclick="appSettings.useLookTwo = !appSettings.useLookTwo; saveSettingsToStorage(); render();" class="w-9 h-4.5 ${appSettings.useLookTwo ? 'bg-blue-600 justify-end' : 'bg-neutral-600 justify-start'} rounded-full p-0.5 flex items-center transition cursor-pointer">
+                                        <div class="w-3.5 h-3.5 bg-white rounded-full shadow-md"></div>
+                                    </button>
+                                </div>
+                                <div class="bg-neutral-800 p-3 rounded-xl space-y-2">
+                                    <div class="font-bold text-white text-[11px]">Look 2 Badge (e.g. Restricted View)</div>
+                                    <div class="space-y-1">
+                                        <label class="block text-[9px] text-gray-400 font-bold uppercase">Badge Label:</label>
+                                        <input type="text" id="help-look2badge-input" value="${activeEv.look2Badge || 'Restricted View'}" oninput="
+                                            activeEv.look2Badge = this.value;
+                                            saveEventsToStorage();
+                                        " class="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-2 text-white text-[11px]">
+                                    </div>
+                                </div>
+                                <div class="bg-neutral-800 p-3 rounded-xl space-y-2">
+                                    <div class="font-bold text-white text-[11px]">Update Attendee & Gate/Door</div>
+                                    <div class="space-y-1">
+                                        <label class="block text-[9px] text-gray-400 font-bold uppercase">Attendee Name:</label>
+                                        <input type="text" id="help-attendee-input" value="${activeEv.attendee || 'Chester leong'}" oninput="
+                                            activeEv.attendee = this.value;
+                                            saveEventsToStorage();
+                                        " class="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-2 text-white text-[11px]">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-[9px] text-gray-400 font-bold uppercase">Gate / Door:</label>
+                                        <input type="text" id="help-gate-input" value="${activeEv.gate || 'Gate 3 / Door A'}" oninput="
+                                            activeEv.gate = this.value;
+                                            saveEventsToStorage();
+                                        " class="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-2 text-white text-[11px]">
+                                    </div>
+                                </div>
+                                <div class="bg-neutral-800 p-3 rounded-xl">
+                                    <div class="flex justify-between items-center mb-1.5">
+                                        <div class="font-bold text-white text-[11px]">Manage Events (Hide/Show Events)</div>
+                                        <button onclick="openManager(null)" class="bg-blue-600 text-white font-bold px-2 py-0.5 rounded text-[10px]">＋ Add Event</button>
+                                    </div>
+                                    <div class="space-y-1.5 max-h-36 overflow-y-auto">
+                                        ${events.map(ev => {
+                                            const isHidden = appSettings.hiddenEvents[ev.id];
+                                            return `
+                                                <div class="bg-neutral-900 p-2 rounded-lg flex items-center justify-between">
+                                                    <div class="truncate max-w-[140px]">
+                                                        <span class="text-[11px] font-medium block truncate">${ev.showTitle}</span>
+                                                    </div>
+                                                    <div class="space-x-1 flex items-center">
+                                                        <button onclick="
+                                                            appSettings.hiddenEvents[${ev.id}] = !appSettings.hiddenEvents[${ev.id}];
+                                                            saveSettingsToStorage(); render();
+                                                        " class="px-2 py-1 rounded text-[9px] font-bold ${isHidden ? 'bg-red-900 text-red-200' : 'bg-green-900 text-green-200'}">
+                                                            ${isHidden ? 'Hidden (Show)' : 'Visible (Hide)'}
+                                                        </button>
+                                                        <button onclick="openManager(${ev.id})" class="text-blue-400 font-bold px-1.5 py-0.5 bg-neutral-800 rounded text-[10px]">Edit</button>
+                                                        <button onclick="deleteEvent(${ev.id})" class="text-red-400 font-bold px-1.5 py-0.5 bg-neutral-800 rounded text-[10px]">Del</button>
+                                                    </div>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                                <div class="bg-neutral-800 p-2.5 rounded-xl flex justify-between items-center">
+                                    <div>
+                                        <div class="font-bold text-white text-[11px]">Allow Screenshots & Recording</div>
+                                    </div>
+                                    <button onclick="appSettings.allowScreenshots = !appSettings.allowScreenshots; saveSettingsToStorage(); render();" class="w-9 h-4.5 ${appSettings.allowScreenshots ? 'bg-blue-600 justify-end' : 'bg-neutral-600 justify-start'} rounded-full p-0.5 flex items-center transition cursor-pointer">
+                                        <div class="w-3.5 h-3.5 bg-white rounded-full shadow-md"></div>
+                                    </button>
+                                </div>
+                                <div class="bg-neutral-800 p-2.5 rounded-xl flex justify-between items-center">
+                                    <div>
+                                        <div class="font-bold text-white text-[11px]">Blur Order Reference</div>
+                                    </div>
+                                    <button onclick="appSettings.blurReference = !appSettings.blurReference; saveSettingsToStorage(); render();" class="w-9 h-4.5 ${appSettings.blurReference ? 'bg-blue-600 justify-end' : 'bg-neutral-600 justify-start'} rounded-full p-0.5 flex items-center transition cursor-pointer">
+                                        <div class="w-3.5 h-3.5 bg-white rounded-full shadow-md"></div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="switchView('account')" class="w-full bg-neutral-800 text-gray-300 font-bold py-2.5 rounded-xl mt-3 text-[11px]">Return to My Account</button>
+                    </div>
+                `;
+            } else if (currentView === 'notifications-view') {
+                container.innerHTML = `
+                    <div class="bg-white min-h-full flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center px-4 py-3 bg-black text-white border-b border-neutral-900 text-xs">
+                                <button onclick="switchView('account')" class="text-white"><i class="fa-solid fa-arrow-left"></i></button>
+                                <span class="font-bold text-xs">My Notifications Inbox</span>
+                                <button onclick="userNotifications.forEach(n => n.unread = false); saveNotifsToStorage(); render();" class="text-[10px] text-blue-400 font-bold">Mark all read</button>
+                            </div>
+                            <div class="p-4 space-y-3">
+                                ${userNotifications.length === 0 ? '<p class="text-center text-gray-400 text-xs py-12">No notifications found.</p>' : ''}
+                                ${userNotifications.map(n => `
+                                    <div class="bg-gray-50 border ${n.unread ? 'border-blue-500 bg-blue-50/20' : 'border-gray-200'} rounded-xl p-3.5 shadow-sm relative">
+                                        ${n.unread ? '<span class="absolute top-3 right-3 w-2 h-2 bg-blue-600 rounded-full"></span>' : ''}
+                                        <div class="text-[11px] font-black text-gray-900 mb-1">${n.title}</div>
+                                        <div class="text-[11px] text-gray-600 leading-snug mb-2">${n.message}</div>
+                                        <div class="flex justify-between items-center text-[9px] text-gray-400 pt-1 border-t border-gray-100">
+                                            <span>Received: ${n.time}</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="p-3 border-t border-gray-200 bg-white">
+                            <button onclick="switchView('account')" class="w-full bg-black text-white font-bold py-2.5 rounded-xl text-xs">Back to My Account</button>
+                        </div>
+                    </div>
+                `;
+            } else if (currentView === 'details' || currentView === 'transfer-success') {
+                const mapEmbedUrl = `https://maps.google.com/maps?q=${activeEv.mapQuery || 'National+Stadium'}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
+                const orderNumDisplayClass = appSettings.blurReference ? 'filter blur-sm select-none transition' : 'transition';
+                container.innerHTML = `
+                    <div class="bg-white text-neutral-900 pb-28 min-h-full relative">
+                        <div class="flex justify-between items-center px-3.5 py-2.5 bg-black text-white border-b border-neutral-900 sticky top-0 z-35">
+                            <button onclick="switchView('events')" class="text-sm text-white"><i class="fa-solid fa-arrow-left"></i></button>
+                            <span class="text-xs font-bold tracking-tight truncate max-w-[200px]">${activeEv.showTitle}</span>
+                            <button onclick="switchView('help-modal')" class="text-[11px] font-semibold text-white">Help</button>
+                        </div>
+                        
+                        <div class="relative w-full h-56 bg-cover bg-center flex flex-col justify-between p-3.5 text-white" style="background-image: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.85) 75%, black 100%), url('${activeEv.imageLink}');">
+                            <div></div>
+                            <div class="z-10 mt-8">
+                                <div class="text-[10px] text-gray-300 font-medium mb-0.5">${activeEv.date} - ${activeEv.location}</div>
+                                <h2 class="text-sm font-black tracking-tight text-white leading-snug">${activeEv.showTitle}</h2>
+                                <div class="flex justify-between items-end mt-1.5">
+                                    <span class="text-[11px] text-gray-300 font-medium">${activeEv.venue}</span>
+                                    <div class="bg-neutral-900/90 border border-neutral-800 text-white px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center space-x-1 shadow-sm">
+                                        <i class="fa-solid fa-ticket text-[9px]"></i>
+                                        <span>Got Tickets (${activeEv.numTickets})</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="px-0 bg-blue-600">
+                            <button onclick="openTicketView(0)" class="w-full text-white font-bold py-3 flex items-center justify-center space-x-1.5 text-[11px] tracking-wider uppercase transition shadow-md">
+                                <i class="fa-solid fa-barcode text-xs"></i>
+                                <span>View Tickets</span>
+                            </button>
+                        </div>
+                        <div class="bg-white text-neutral-900">
+                            <div class="flex border-b border-gray-200 text-[11px] font-bold text-gray-400">
+                                <div class="w-1/2 text-center py-2.5 border-b-2 border-black text-black">Tickets</div>
+                                <div class="w-1/2 text-center py-2.5">Extras</div>
+                            </div>
+                            <div class="px-3 py-3 space-y-2.5 bg-gray-50 pb-12">
+                                <div class="flex justify-between items-center text-[11px] font-bold text-gray-700 mb-0.5">
+                                    <span class="flex items-center space-x-2">
+                                        <span>Order #<span class="${orderNumDisplayClass}">${activeEv.orderNumber}</span></span>
+                                    </span>
+                                </div>
+                                ${Array.from({length: activeEv.numTickets}, (_, i) => {
+                                    const seatNum = activeEv.startSeat + i;
+                                    return `
+                                        <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm relative hover:border-blue-600 transition">
+                                            <div onclick="openTicketView(${i})" class="cursor-pointer">
+                                                <div class="text-[8px] font-black text-gray-400 tracking-wider uppercase mb-1">${activeEv.ticketType}</div>
+                                                <div class="grid grid-cols-2 text-center text-[11px] bg-gray-100 py-1.5 rounded-lg border border-gray-200">
+                                                    <div class="border-r border-gray-200"><span class="block text-gray-500 text-[8px] font-bold">SECTION</span><span class="font-black text-xs text-gray-900">${activeEv.sec}</span></div>
+                                                    <div><span class="block text-gray-500 text-[8px] font-bold">SEAT</span><span class="font-black text-xs text-gray-900">${seatNum}</span></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mt-3">
+                                    <div class="p-2.5 bg-white border-b border-gray-100 flex justify-between items-center">
+                                        <a href="https://www.google.com/maps/search/?api=1&query=${activeEv.mapQuery || 'National+Stadium'}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold py-1 px-2.5 rounded-full shadow-sm">Open in Maps</a>
+                                        <span class="text-[11px] font-bold text-gray-800 truncate max-w-[150px]">📍 ${activeEv.venue}</span>
+                                    </div>
+                                    <div class="h-36 bg-gray-200 relative overflow-hidden">
+                                        <iframe width="100%" height="100%" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="${mapEmbedUrl}"></iframe>
+                                    </div>
+                                </div>
+                                ${renderGotTicketsShare(activeEv)}
+                            </div>
+                        </div>
+                        ${renderTransferSellDock()}
+                    </div>
+                `;
+            } else if (currentView === 'auth') {
+                if (!appSettings.allowTransfer) {
+                    switchView('details');
+                    return;
+                }
+                container.innerHTML = `
+                    <div class="bg-neutral-900 text-white min-h-full flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center px-3.5 py-2.5 bg-neutral-900 border-b border-neutral-800 text-xs">
+                                <button onclick="switchView('details')" class="text-gray-300 font-medium">Cancel</button>
+                                <span class="font-bold text-xs">Authentication</span>
+                                <span></span>
+                            </div>
+                            <div class="bg-neutral-900 px-5 py-5 text-center border-b border-neutral-800">
+                                <div class="w-14 h-10 bg-neutral-800 border border-neutral-700 rounded-xl mx-auto flex items-center justify-center shadow-inner relative">
+                                    <div class="flex space-x-1 text-blue-400 text-[11px] font-bold"><span>★</span><span>★</span><span>★</span></div>
+                                    <div class="absolute -bottom-1.5 right-3 w-3.5 h-2.5 bg-yellow-500 rounded-sm"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-5 bg-white text-gray-900 flex-1 rounded-t-3xl shadow-2xl">
+                            <div class="mb-3 pt-1">
+                                <h3 class="font-black text-xs text-gray-900">Authenticate Your Account</h3>
+                                <p class="text-[10px] text-gray-500 mt-0.5 leading-snug">A code was sent to *****${activeEv.phoneLast4}. Enter below:</p>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-[11px] font-bold text-gray-700 mb-1">One-Time Code</label>
+                                <input type="text" id="otp-input" class="w-full border border-gray-300 rounded-xl p-2.5 text-center text-lg font-mono tracking-widest focus:outline-none focus:border-blue-600 bg-gray-50">
+                            </div>
+                            <button onclick="switchView('transfer-select')" class="w-full bg-black hover:bg-neutral-800 text-white font-bold py-3 rounded-xl text-[11px] tracking-wider uppercase shadow-md">Confirm Code</button>
+                        </div>
+                    </div>
+                `;
+            } else if (currentView === 'transfer-select') {
+                if (!appSettings.allowTransfer) {
+                    switchView('details');
+                    return;
+                }
+                container.innerHTML = `
+                    <div class="bg-neutral-900 text-white min-h-full flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center px-3.5 py-2.5 border-b border-neutral-800 text-xs">
+                                <button onclick="switchView('details')"><i class="fa-solid fa-arrow-left text-sm"></i></button>
+                                <span class="font-bold text-xs truncate max-w-[200px]">${activeEv.showTitle}</span>
+                                <button class="font-medium">Help</button>
+                            </div>
+                            <div class="bg-black text-center py-2 text-[9px] font-black tracking-widest text-gray-400 uppercase">SELECT TICKETS TO TRANSFER</div>
+                        </div>
+                        <div class="bg-white text-gray-900 p-4 rounded-t-3xl flex-1 flex flex-col justify-between shadow-2xl">
+                            <div>
+                                <div class="flex justify-between items-center mb-3 text-[11px] font-bold text-gray-800">
+                                    <span>Sec ${activeEv.sec}, Row ${activeEv.row}</span>
+                                    <span></span>
+                                </div>
+                                <div class="grid grid-cols-4 gap-2">
+                                    ${Array.from({length: activeEv.numTickets}, (_, i) => {
+                                        const seatNum = activeEv.startSeat + i;
+                                        const isSel = selectedSeatsState[seatNum];
+                                        return `
+                                            <div onclick="toggleSeatSelection(${seatNum})" class="border-2 ${isSel ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200'} rounded-xl p-2 text-center cursor-pointer transition">
+                                                <div class="text-[8px] font-black text-gray-500 mb-1.5 uppercase">SEAT ${seatNum}</div>
+                                                <div class="w-4 h-4 mx-auto rounded-full ${isSel ? 'bg-blue-600 text-white flex items-center justify-center text-[9px]' : 'border border-gray-300'}">
+                                                    ${isSel ? '✓' : ''}
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center pt-3 border-t border-gray-200">
+                                <span class="text-[11px] font-bold text-gray-600">Secure Transfer</span>
+                                <button onclick="validateAndProceedTransfer()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-[11px] font-bold tracking-wider uppercase shadow">TRANSFER TO &gt;</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentView === 'transfer-method') {
+                container.innerHTML = `
+                    <div class="bg-white min-h-full flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center px-3.5 py-2.5 border-b border-gray-200 text-xs">
+                                <button onclick="switchView('transfer-select')" class="font-bold"><i class="fa-solid fa-arrow-left"></i></button>
+                                <span class="font-bold tracking-wide">TRANSFER TO</span>
+                                <span></span>
+                            </div>
+                            <div class="bg-neutral-900 text-white p-3 text-xs">
+                                <div class="font-bold text-[11px]">Sec ${activeEv.sec} Row ${activeEv.row}</div>
+                            </div>
+                            <div class="p-4 space-y-3">
+                                <button class="w-full border border-gray-200 rounded-xl p-3 flex justify-between items-center text-[11px] font-bold text-blue-600 shadow-sm hover:bg-gray-50">
+                                    <span>Select From Contacts</span>
+                                    <i class="fa-regular fa-user-circle text-sm"></i>
+                                </button>
+                                <button onclick="switchView('transfer-form')" class="w-full border border-gray-200 rounded-xl p-3 flex justify-between items-center text-[11px] font-bold text-blue-600 shadow-sm hover:bg-gray-50">
+                                    <span>Manually Enter Recipient</span>
+                                    <i class="fa-solid fa-plus text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-3 border-t border-gray-200 bg-white">
+                            <button onclick="switchView('transfer-select')" class="text-xs font-bold text-blue-600">&lt; BACK</button>
+                        </div>
+                    </div>
+                `;
+            } else if (currentView === 'transfer-form') {
+                container.innerHTML = `
+                    <div class="bg-white min-h-full flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center px-3.5 py-2.5 border-b border-gray-200 text-xs">
+                                <button onclick="switchView('transfer-method')" class="font-bold"><i class="fa-solid fa-arrow-left"></i></button>
+                                <span class="font-bold tracking-wide uppercase text-xs">Recipient Details</span>
+                                <span></span>
+                            </div>
+                            <div class="bg-neutral-900 text-white p-3 text-xs">
+                                <div class="font-bold text-[11px]">Sec ${activeEv.sec} Row ${activeEv.row}</div>
+                            </div>
+                            <div class="p-4 space-y-3 text-xs">
+                                <div><label class="block font-bold text-gray-700 mb-1 text-[11px]">First Name</label><input type="text" id="recipient-fname" placeholder="First Name" value="Alex" class="w-full border border-gray-300 rounded-xl p-2 focus:border-blue-600 focus:outline-none bg-gray-50 text-xs"></div>
+                                <div><label class="block font-bold text-gray-700 mb-1 text-[11px]">Last Name</label><input type="text" id="recipient-lname" placeholder="Last Name" value="Smith" class="w-full border border-gray-300 rounded-xl p-2 focus:border-blue-600 focus:outline-none bg-gray-50 text-xs"></div>
+                                <div><label class="block font-bold text-gray-700 mb-1 text-[11px]">Email</label><input type="text" id="recipient-email" value="${activeEv.email}" class="w-full border border-gray-300 rounded-xl p-2 focus:border-blue-600 focus:outline-none bg-gray-50 text-xs"></div>
+                            </div>
+                        </div>
+                        <div class="p-3 border-t border-gray-200 flex justify-between items-center bg-white">
+                            <button onclick="switchView('transfer-select')" class="text-xs font-bold text-red-600">Cancel</button>
+                            <button onclick="executeTransferSubmission()" class="bg-black hover:bg-neutral-800 text-white px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider shadow">Transfer Tickets</button>
+                        </div>
+                    </div>
+                `;
+            } else if (currentView === 'transfer-success') {
+                container.innerHTML = `
+                    <div class="bg-neutral-900 text-white min-h-full flex flex-col justify-between p-5 text-center">
+                        <div></div>
+                        <div class="space-y-3">
+                            <div class="w-16 h-16 bg-blue-500/10 border-2 border-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <i class="fa-solid fa-check text-blue-500 text-2xl"></i>
+                            </div>
+                            <h2 class="text-xl font-bold">Transfer Initiated!</h2>
+                            <p class="text-[11px] text-gray-400">Waiting for receiver to accept it. Notification sent to your inbox.</p>
+                        </div>
+                        <button onclick="closeSuccessModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-[11px] uppercase tracking-wider shadow-md">
+                            OK
+                        </button>
+                    </div>
+                `;
+            } else if (currentView === 'transfer-failed') {
+                container.innerHTML = `
+                    <div class="bg-neutral-900 text-white min-h-full flex flex-col justify-between p-5 text-center">
+                        <div></div>
+                        <div class="space-y-3">
+                            <div class="w-16 h-16 bg-red-500/10 border-2 border-red-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <i class="fa-solid fa-triangle-exclamation text-red-500 text-2xl"></i>
+                            </div>
+                            <h2 class="text-xl font-bold">Transfer Unsuccessful</h2>
+                            <p class="text-[11px] text-gray-300 leading-snug">
+                                You selected <strong>${lastFailedRecipient.count}</strong> ticket(s), but this event requires a minimum of <strong>${lastFailedRecipient.minRequired || activeEv.minTransferLimit || 1}</strong> ticket(s) per transfer. Your transfer has been blocked for policy compliance.
+                            </p>
+                        </div>
+                        <button onclick="switchView('transfer-select')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-[11px] uppercase tracking-wider shadow-md">
+                            Select More Tickets
+                        </button>
+                    </div>
+                `;
+            } else if (currentView === 'barcode') {
+                const currentSeatNum = activeEv.startSeat + activeTicketIndex;
+                container.innerHTML = `
+                    <div class="bg-neutral-900 text-white min-h-full flex flex-col justify-between p-3.5 relative">
+                        <div class="flex justify-between items-center text-xs">
+                            <button onclick="switchView('details')"><i class="fa-solid fa-arrow-left text-sm"></i></button>
+                            <span class="font-bold text-center truncate max-w-[210px] leading-tight text-[11px]">${activeEv.showTitle.substring(0, 26)}...<br><span class="text-[9px] text-gray-400 font-normal">${activeEv.date} - ${activeEv.venue}</span></span>
+                            <span></span>
+                        </div>
+                        <div class="bg-white text-gray-900 rounded-2xl overflow-hidden shadow-2xl my-auto border border-gray-100 relative">
+                            ${activeEv.numTickets > 1 ? `
+                                <button onclick="shiftTicket(-1)" class="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/60 hover:bg-black text-white rounded-full flex items-center justify-center z-20 text-[11px] shadow">
+                                    <i class="fa-solid fa-chevron-left"></i>
+                                </button>
+                                <button onclick="shiftTicket(1)" class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/60 hover:bg-black text-white rounded-full flex items-center justify-center z-20 text-[11px] shadow">
+                                    <i class="fa-solid fa-chevron-right"></i>
+                                </button>
+                            ` : ''}
+                            <div class="bg-white p-3 text-center border-b border-gray-100">
+                                <div class="text-[9px] font-bold text-gray-500 mb-1.5">
+                                    ${appSettings.allowScreenshots ? "Screenshots & recording allowed 🔄" : "🔒 Screenshots Disabled"}
+                                </div>
+                                <div class="tm-barcode px-2 ${!appSettings.allowScreenshots ? 'opacity-20 filter blur-sm' : ''}">
+                                    ${barcodeBarsHtml(activeTicketIndex)}
+                                </div>
+                            </div>
+                            <div class="text-white p-3.5 text-center bg-cover bg-center" style="background-image: linear-gradient(rgba(15,15,15,0.92), rgba(15,15,15,0.95)), url('${activeEv.imageLink}');">
+                                <div class="text-left text-[11px] text-gray-300 mb-1 font-medium">Standard Tickets<br><span class="text-white font-bold">${activeEv.ticketType}</span></div>
+                                <div class="text-left text-[9px] text-gray-400 uppercase font-bold tracking-wider mt-1.5">SECTION</div>
+                                <div class="text-left font-black text-base text-white mb-2">${activeEv.sec}</div>
+                                <div class="bg-black text-white py-2 rounded-lg font-bold text-[11px] uppercase tracking-wider mb-1.5 border border-neutral-800">
+                                    ${activeEv.ticketType}
+                                </div>
+                                <div class="text-left text-[9px] text-gray-400 font-semibold">${activeEv.row} • SEAT ${currentSeatNum}</div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-center text-[11px] text-gray-400 font-medium mb-2">${activeTicketIndex + 1} of ${activeEv.numTickets}</div>
+                            <div class="flex space-x-2">
+                                <button class="flex-1 bg-black hover:bg-neutral-800 text-white py-2.5 rounded-xl text-[11px] font-bold border border-neutral-800 flex items-center justify-center space-x-1 shadow">
+                                    <span></span><span>Add to Apple Wallet</span>
+                                </button>
+                                <button class="bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-2.5 rounded-xl text-[11px] font-bold flex items-center space-x-1 shadow">
+                                    <i class="fa-solid fa-circle-info text-xs"></i><span>Info</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentView === 'manager') {
+                const ev = editingEventId ? (events.find(e => e.id === editingEventId) || activeEv) : {};
+                container.innerHTML = `
+                    <div class="bg-neutral-900 text-white min-h-full p-3.5 pb-24 text-[11px] overflow-y-auto">
+                        <div class="flex justify-between items-center mb-3 border-b border-neutral-800 pb-2">
+                            <h2 class="text-xs font-black tracking-wide">${editingEventId ? 'Edit Event Details' : 'Add New Event'}</h2>
+                            <button onclick="switchView('help-modal')" class="text-xs text-gray-400 font-bold hover:text-white">✕ Cancel</button>
+                        </div>
+                        <form onsubmit="saveEventForm(event)" class="space-y-2.5">
+                            <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Account Name:</label><input type="text" id="form-username" value="${ev.username || 'Chester leong'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                            <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Show Title:</label><input type="text" id="form-showTitle" value="${ev.showTitle || ''}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                            <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Ticket Type:</label><input type="text" id="form-ticketType" value="${ev.ticketType || 'CAT 2 Standard'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                            <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Look 2 Badge (e.g. Restricted View):</label><input type="text" id="form-look2badge" value="${ev.look2Badge || 'Restricted View'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                            <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Image URL:</label><input type="text" id="form-imageLink" value="${ev.imageLink || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                            
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Attendee Name:</label><input type="text" id="form-attendee" value="${ev.attendee || 'Chester leong'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                                <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Gate / Door:</label><input type="text" id="form-gate" value="${ev.gate || 'Gate 3 / Door A'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Location / City:</label><input type="text" id="form-location" value="${ev.location || 'Singapore'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                                <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Venue / Stadium:</label><input type="text" id="form-venue" value="${ev.venue || 'Singapore Indoor Stadium'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Country Name:</label><input type="text" id="form-country" value="${ev.country || 'Singapore'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                                <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Flag Emoji:</label><input type="text" id="form-flagLink" value="${ev.flagLink || '🇸🇬'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                            </div>
+
+                            <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Ticketmaster Domain (e.g. ticketmaster.sg):</label><input type="text" id="form-domain" value="${ev.domain || 'ticketmaster.sg'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Date:</label><input type="text" id="form-date" value="${ev.date || 'Aug 16'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                                <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Time:</label><input type="text" id="form-time" value="${ev.time || '06:00 PM'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-1.5">
+                                <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Sec:</label><input type="text" id="form-sec" value="${ev.sec || '111'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                                <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Row:</label><input type="text" id="form-row" value="${ev.row || 'A'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                                <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Start Seat:</label><input type="number" id="form-startSeat" value="${ev.startSeat || 6}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Total Tickets:</label><input type="number" id="form-numTickets" value="${ev.numTickets || 4}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                                <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Min Transfer Limit:</label><input type="number" id="form-minLimit" value="${ev.minTransferLimit || 1}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                            </div>
+
+                            <div><label class="block text-gray-400 font-bold mb-0.5 text-[10px]">Order Number:</label><input type="text" id="form-orderNumber" value="${ev.orderNumber || 'QZ232-533R'}" required class="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-white text-[11px]"></div>
+                            
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl mt-3 uppercase tracking-wider shadow text-[11px]">Save Event & Persist</button>
+                        </form>
+                    </div>
+                `;
+            }
+        }
+        document.addEventListener("DOMContentLoaded", () => {
+            render();
+        });
+        render();
+    </script>
+</body>
+</html>
